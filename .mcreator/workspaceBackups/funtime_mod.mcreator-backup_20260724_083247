@@ -1,0 +1,55 @@
+{
+  "mod_elements": [
+    {
+      "name": "AutoBuyHandler",
+      "type": "code",
+      "compiles": true,
+      "locked_code": true,
+      "registry_name": "auto_buy_handler",
+      "metadata": {
+        "files": [
+          "src/main/java/net/mcreator/funtimemod/AutoBuyHandler.java"
+        ]
+      }
+    },
+    {
+      "name": "PlayerGlowModule",
+      "type": "code",
+      "compiles": false,
+      "locked_code": true,
+      "registry_name": "player_glow_module",
+      "metadata": {
+        "files": [
+          "src/main/java/net/mcreator/funtimemod/PlayerGlowModule.java"
+        ]
+      }
+    }
+  ],
+  "variable_elements": [],
+  "sound_elements": [],
+  "tag_elements": {},
+  "tab_element_order": {},
+  "language_map": {
+    "en_us": {}
+  },
+  "foldersRoot": {
+    "name": "~",
+    "children": []
+  },
+  "workspaceSettings": {
+    "modid": "funtime_mod",
+    "modName": "FunTime Mod",
+    "version": "1.0.0",
+    "author": "pnegi, MCreator",
+    "websiteURL": "https://mcreator.net",
+    "license": "Not specified",
+    "serverSideOnly": false,
+    "requiredMods": [],
+    "dependencies": [],
+    "dependants": [],
+    "mcreatorDependencies": [],
+    "currentGenerator": "neoforge-1.21.4",
+    "modElementsPackage": "net.mcreator.funtimemod"
+  },
+  "mcreatorVersion": 202500113416
+}
