@@ -4,7 +4,7 @@ plugins {
 }
 
 version = '1.0'
-base.archivesName = "modid"
+base.archivesName = "OptiItems"
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
@@ -14,8 +14,7 @@ neoForge {
     runs {
         client {
             client()
-			
-			programArgument '--username=ethmbo'
+            programArgument '--username=ethmbo'
 
             def mcreatorJvmOptions = System.getenv('MCREATOR_JVM_OPTIONS')
             if (mcreatorJvmOptions) {

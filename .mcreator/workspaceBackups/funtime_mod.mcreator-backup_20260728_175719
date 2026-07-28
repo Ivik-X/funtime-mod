@@ -23,6 +23,30 @@
           "src/main/java/net/mcreator/funtimemod/PlayerGlowModule.java"
         ]
       }
+    },
+    {
+      "name": "OptiItemsCore",
+      "type": "code",
+      "compiles": true,
+      "locked_code": true,
+      "registry_name": "opti_items_core",
+      "metadata": {
+        "files": [
+          "src/main/java/net/mcreator/funtimemod/OptiItemsCore.java"
+        ]
+      }
+    },
+    {
+      "name": "OptiItemsMenuScreen",
+      "type": "code",
+      "compiles": true,
+      "locked_code": true,
+      "registry_name": "opti_items_menu_screen",
+      "metadata": {
+        "files": [
+          "src/main/java/net/mcreator/funtimemod/OptiItemsMenuScreen.java"
+        ]
+      }
     }
   ],
   "variable_elements": [],
