@@ -45,6 +45,12 @@ public class OptiVisuals {
         if (OptiConfig.settings.fullbright) mc.player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 1000, 0, false, false, false));
         else if (mc.player.hasEffect(MobEffects.NIGHT_VISION) && mc.player.getEffect(MobEffects.NIGHT_VISION).getDuration() > 600) mc.player.removeEffect(MobEffects.NIGHT_VISION);
 
+        if (OptiConfig.settings.noBadEffects) {
+            if (mc.player.hasEffect(MobEffects.BLINDNESS)) mc.player.removeEffect(MobEffects.BLINDNESS);
+            if (mc.player.hasEffect(MobEffects.DARKNESS)) mc.player.removeEffect(MobEffects.DARKNESS);
+            if (mc.player.hasEffect(MobEffects.CONFUSION)) mc.player.removeEffect(MobEffects.CONFUSION);
+        }
+
         // АСИНХРОННЫЙ СКАНЕР БЛОКОВ (Радиус 48 = 96x96x96 блоков, без лагов!)
         if (OptiConfig.settings.blockEspEnabled && !OptiConfig.settings.blockEspList.isEmpty() && !isScanning) {
             isScanning = true;
@@ -112,18 +118,8 @@ public class OptiVisuals {
                 float cx = mc.getWindow().getGuiScaledWidth() / 2f + (float) (Math.cos(rad) * 60);
                 float cy = mc.getWindow().getGuiScaledHeight() / 2f + (float) (Math.sin(rad) * 60);
                         
-                event.getGuiGraphics().pose().pushPose();
-                event.getGuiGraphics().pose().translate(cx, cy, 0);
-                event.getGuiGraphics().pose().mulPose(com.mojang.math.Axis.ZP.rotationDegrees((float)angle + 90));
-                com.mojang.blaze3d.vertex.VertexConsumer triBuilder = mc.renderBuffers().bufferSource().getBuffer(net.minecraft.client.renderer.RenderType.gui());
-                org.joml.Matrix4f p = event.getGuiGraphics().pose().last().pose();
-                triBuilder.addVertex(p, 0, -4, 0).setColor(255, 0, 0, 255);
-                triBuilder.addVertex(p, 3, 3, 0).setColor(255, 0, 0, 255);
-                triBuilder.addVertex(p, -3, 3, 0).setColor(255, 0, 0, 255);
-                triBuilder.addVertex(p, -3, 3, 0).setColor(255, 0, 0, 255);
-                event.getGuiGraphics().pose().popPose();
+                event.getGuiGraphics().fill((int)cx - 2, (int)cy - 2, (int)cx + 2, (int)cy + 2, 0xFFFF0000);
             }
-            mc.renderBuffers().bufferSource().endBatch(net.minecraft.client.renderer.RenderType.gui());
         }
     }
 

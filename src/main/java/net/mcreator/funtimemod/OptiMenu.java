@@ -87,6 +87,7 @@ public class OptiMenu extends Screen {
             this.addRenderableWidget(Button.builder(Component.literal("Player ESP: " + (OptiConfig.settings.playerEsp ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.playerEsp = !OptiConfig.settings.playerEsp; switchTab("world", true); }).bounds(cX - 100, sY + 50, 95, 20).build());
 
             t1 = new EditBox(this.font, cX - 100, sY + 90, 95, 20, Component.literal("")); t1.setValue(String.valueOf(OptiConfig.settings.wardenEspTime)); this.addRenderableWidget(t1);
+            t2 = new EditBox(this.font, cX + 5, sY + 90, 95, 20, Component.literal("")); t2.setValue(String.valueOf(OptiConfig.settings.wardenTextScale)); this.addRenderableWidget(t2);
         }
         else if (currentTab.equals("misc")) {
             this.addRenderableWidget(Button.builder(Component.literal("InvMove: " + (OptiConfig.settings.inventoryMove ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.inventoryMove = !OptiConfig.settings.inventoryMove; switchTab("misc", true); }).bounds(cX - 100, sY, 200, 20).build());
@@ -126,6 +127,7 @@ public class OptiMenu extends Screen {
                 OptiConfig.settings.vmScale = Double.parseDouble(t7.getValue());
             } else if (currentTab.equals("world") && t1 != null) {
                 OptiConfig.settings.wardenEspTime = Integer.parseInt(t1.getValue());
+                OptiConfig.settings.wardenTextScale = Double.parseDouble(t2.getValue());
             } else if (currentTab.equals("misc") && t1 != null) {
                 OptiConfig.settings.smartLootMinPrice = Long.parseLong(t1.getValue());
             }
@@ -149,6 +151,7 @@ public class OptiMenu extends Screen {
             guiGraphics.drawString(this.font, "Scale:", (int)(cX - 25), (int)(sY + 148), 0xAAAAAA, true);
         } else if (currentTab.equals("world")) {
             guiGraphics.drawString(this.font, "Время Warden ESP (сек):", (int)(cX - 100), (int)(sY + 78), 0xAAAAAA, true);
+            guiGraphics.drawString(this.font, "Размер текста Warden:", (int)(cX + 5), (int)(sY + 78), 0xAAAAAA, true);
         } else if (currentTab.equals("misc")) {
             guiGraphics.drawString(this.font, "Мин. цена SmartLoot:", (int)(cX - 100), (int)(sY + 78), 0xAAAAAA, true);
         }

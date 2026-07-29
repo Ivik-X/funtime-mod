@@ -129,6 +129,32 @@ public class OptiWarden {
             }
         }
         
+
+        
+        // Вместо этого сканируем радиус вокруг игрока на предмет сундуков
+        BlockPos pPos = mc.player.blockPosition();
+        int r = 30;
+        for (int x = -r; x <= r; x++) {
+            for (int y = -r; y <= r; y++) {
+                for (int z = -r; z <= r; z++) {
+                    BlockPos check = pPos.offset(x, y, z);
+                    if (trackedChests.containsKey(check)) continue;
+                    net.minecraft.world.level.block.state.BlockState state = mc.level.getBlockState(check);
+                    if (state.is(Blocks.CHEST) || state.is(Blocks.TRAPPED_CHEST) || state.is(Blocks.BARREL)) {
+                        boolean nearTracked = false;
+                        for (BlockPos tPos : trackedChests.keySet()) {
+                            if (tPos.distSqr(check) < 1600) { nearTracked = true; break; }
+                        }
+                        if (nearTracked) {
+                            poseStack.pushPose();
+                            OptiVisuals.drawBox(poseStack, consumer, check.getX() - camPos.x, check.getY() - camPos.y, check.getZ() - camPos.z, 200, 0, 255, 100);
+                            poseStack.popPose();
+                        }
+                    }
+                }
+            }
+        }
+        
         // Принудительно отрисовываем кубы в мир
         bufferSource.endBatch(net.minecraft.client.renderer.RenderType.guiOverlay());
 
@@ -140,7 +166,8 @@ public class OptiWarden {
                 poseStack.pushPose();
                 poseStack.translate(pos.getX() + 0.5 - camPos.x, pos.getY() + 1.2 - camPos.y, pos.getZ() + 0.5 - camPos.z);
                 poseStack.mulPose(mc.getEntityRenderDispatcher().cameraOrientation());
-                poseStack.scale(-0.04F, -0.04F, 0.04F); 
+                float scale = (float) OptiConfig.settings.wardenTextScale;
+                poseStack.scale(-scale, -scale, scale); 
                 String timeText = "§f" + rem + "s";
                 mc.font.drawInBatch(timeText, (float) (-mc.font.width(timeText) / 2), 0, 0xFFFFFF, false, poseStack.last().pose(), bufferSource, net.minecraft.client.gui.Font.DisplayMode.SEE_THROUGH, 0, 15728880);
                 poseStack.popPose();
@@ -150,19 +177,5 @@ public class OptiWarden {
     }
 
 
-    @SubscribeEvent
-    public static void onKey(InputEvent.Key event) {
-        if (event.getAction() == GLFW.GLFW_PRESS && event.getKey() == GLFW.GLFW_KEY_B && Screen.hasControlDown()) {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null && mc.level != null) {
-                mc.player.displayClientMessage(Component.literal("§e[OptiItem Debug] Scanning Entities:"), false);
-                for (Entity e : mc.level.entitiesForRendering()) {
-                    if (e.distanceTo(mc.player) < 15 && e.hasCustomName()) {
-                        String name = e.getCustomName().getString();
-                        mc.player.displayClientMessage(Component.literal("-> Name: " + name + " | Clean: " + name.replaceAll("§[0-9a-fk-or]", "")), false);
-                    }
-                }
-            }
-        }
-    }
+
 }

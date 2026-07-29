@@ -119,6 +119,18 @@
           "src/main/java/net/mcreator/funtimemod/OptiVisuals.java"
         ]
       }
+    },
+    {
+      "name": "OptiCatalogs",
+      "type": "code",
+      "compiles": true,
+      "locked_code": true,
+      "registry_name": "opti_catalogs",
+      "metadata": {
+        "files": [
+          "src/main/java/net/mcreator/funtimemod/OptiCatalogs.java"
+        ]
+      }
     }
   ],
   "variable_elements": [],

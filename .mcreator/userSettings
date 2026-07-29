@@ -5,7 +5,16 @@
   "projectBrowserSplitPos": 0,
   "projectBrowserState": {
     "expandedPaths": [
-      "[, FunTime Mod]"
+      "[, FunTime Mod]",
+      "[, FunTime Mod, Source (Gradle)]",
+      "[, FunTime Mod, Source (Gradle), /home/efim/Projects/funtime-mod/src/main/java/net]",
+      "[, FunTime Mod, Source (Gradle), /home/efim/Projects/funtime-mod/src/main/java/net, /home/efim/Projects/funtime-mod/src/main/java/net/mcreator]",
+      "[, FunTime Mod, Source (Gradle), /home/efim/Projects/funtime-mod/src/main/java/net, /home/efim/Projects/funtime-mod/src/main/java/net/mcreator, /home/efim/Projects/funtime-mod/src/main/java/net/mcreator/funtimemod]",
+      "[, FunTime Mod, Resources (Gradle)]",
+      "[, FunTime Mod, Resources (Gradle), /home/efim/Projects/funtime-mod/src/main/resources/assets]",
+      "[, FunTime Mod, Resources (Gradle), /home/efim/Projects/funtime-mod/src/main/resources/assets, /home/efim/Projects/funtime-mod/src/main/resources/assets/funtime_mod]",
+      "[, FunTime Mod, Resources (Gradle), /home/efim/Projects/funtime-mod/src/main/resources/assets, /home/efim/Projects/funtime-mod/src/main/resources/assets/funtime_mod, /home/efim/Projects/funtime-mod/src/main/resources/assets/funtime_mod/lang]",
+      "[, FunTime Mod, Resources (Gradle), /home/efim/Projects/funtime-mod/src/main/resources/META-INF]"
     ]
   }
 }

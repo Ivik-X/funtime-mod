@@ -52,6 +52,9 @@ public class OptiConfig {
         public boolean wardenEsp = false;
         public int wardenEspTime = 20; 
         public boolean wardenAutoOpen = false;
+        public double wardenTextScale = 0.08;
+
+        public int quickBuyMaxCount = 1;
 
         public boolean inventoryMove = true;
         public boolean fullbright = false;

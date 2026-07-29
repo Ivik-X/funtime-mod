@@ -22,9 +22,12 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 
+import net.minecraft.client.gui.components.EditBox;
+
 @EventBusSubscriber(modid = "funtime_mod", value = Dist.CLIENT)
 public class OptiSniper {
 
+    private static EditBox maxCountBox;
     private static boolean isBotActive = false;
     private static int afkWalkTimer = 0;
     private static int relistTimer = 0;
@@ -36,6 +39,8 @@ public class OptiSniper {
     private static long lastCtrlKTime = 0;
     private static boolean isQuickBuyPending = false;
     private static int quickBuyWaitTimer = 0;
+    private static int restoreSlotTimer = 0;
+    private static int restoreSlotTarget = -1;
     
     private static boolean isInitialPriceSync = false;
     private static int initialPriceSyncDoneCount = 0, currentSyncTarget = 50;
@@ -122,7 +127,7 @@ public class OptiSniper {
             Slot slot = container.getMenu().slots.get(i);
             if (slot.getItem().isEmpty()) continue;
             long price = parsePrice(slot.getItem());
-            if (price > 0) {
+            if (price > 0 && slot.getItem().getCount() <= OptiConfig.settings.quickBuyMaxCount) {
                 long perUnit = price / slot.getItem().getCount(); // ВЫЧИСЛЕНИЕ ЗА 1 ШТ
                 if (perUnit < lowestPricePerUnit) { lowestPricePerUnit = perUnit; bestSlot = i; }
             }
@@ -132,6 +137,57 @@ public class OptiSniper {
             sendMessage("§a[OptiItem] Моментальная покупка (Shift-Click) выполнена!");
         } else {
             sendMessage("§c[OptiItem] Лотов не найдено.");
+        }
+    }
+
+    @SubscribeEvent
+    public static void onScreenInit(ScreenEvent.Init.Post event) {
+        if (!OptiCore.isGloballyEnabled) return;
+        if (event.getScreen() instanceof AbstractContainerScreen<?> container) {
+            if (container.getTitle().getString().contains("Поиск")) {
+                maxCountBox = new EditBox(Minecraft.getInstance().font, container.width / 2 + 50, 10, 30, 20, Component.literal(""));
+                maxCountBox.setValue(String.valueOf(OptiConfig.settings.quickBuyMaxCount));
+                event.addListener(maxCountBox);
+            } else {
+                maxCountBox = null;
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onScreenRender(ScreenEvent.Render.Post event) {
+        if (!OptiCore.isGloballyEnabled) return;
+        if (event.getScreen() instanceof AbstractContainerScreen<?> container && container.getTitle().getString().contains("Поиск")) {
+            if (maxCountBox != null) {
+                event.getGuiGraphics().drawString(Minecraft.getInstance().font, "Макс. кол-во:", container.width / 2 - 20, 16, 0xAAAAAA, true);
+                try { OptiConfig.settings.quickBuyMaxCount = Integer.parseInt(maxCountBox.getValue()); } catch (Exception ignored) {}
+            }
+            int leftPos = (container.width - 176) / 2;
+            int topPos = (container.height - 222) / 2;
+            
+            long lowestPrice = Long.MAX_VALUE;
+            for (int i = 0; i < 45 && i < container.getMenu().slots.size(); i++) {
+                Slot slot = container.getMenu().slots.get(i);
+                if (!slot.getItem().isEmpty() && slot.getItem().getCount() <= OptiConfig.settings.quickBuyMaxCount) {
+                    long p = parsePrice(slot.getItem());
+                    if (p > 0) {
+                        long perUnit = p / slot.getItem().getCount();
+                        if (perUnit < lowestPrice) lowestPrice = perUnit;
+                    }
+                }
+            }
+            
+            if (lowestPrice != Long.MAX_VALUE) {
+                for (int i = 0; i < 45 && i < container.getMenu().slots.size(); i++) {
+                    Slot slot = container.getMenu().slots.get(i);
+                    if (!slot.getItem().isEmpty() && slot.getItem().getCount() <= OptiConfig.settings.quickBuyMaxCount) {
+                        long p = parsePrice(slot.getItem());
+                        if (p > 0 && p / slot.getItem().getCount() == lowestPrice) {
+                            event.getGuiGraphics().fill(leftPos + slot.x, topPos + slot.y, leftPos + slot.x + 16, topPos + slot.y + 16, 0x8000FF00);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -179,6 +235,14 @@ public class OptiSniper {
             return; 
         } else {
             isQuickBuyPending = false;
+        }
+
+        if (restoreSlotTimer > 0) {
+            restoreSlotTimer--;
+            if (restoreSlotTimer == 0 && restoreSlotTarget != -1) {
+                mc.player.getInventory().selected = restoreSlotTarget;
+                restoreSlotTarget = -1;
+            }
         }
 
         if (mc.screen instanceof AbstractContainerScreen<?> container) {
@@ -231,6 +295,12 @@ public class OptiSniper {
 
         if (!isBotActive || state == 0) return;
 
+        if (mc.options.keyUp.isDown() || mc.options.keyDown.isDown() || mc.options.keyLeft.isDown() || mc.options.keyRight.isDown() || mc.options.keyAttack.isDown() || mc.options.keyUse.isDown()) {
+            isBotActive = false; state = 0;
+            sendMessage("§c[OptiItem] Обнаружена активность игрока. AFK-Аукцион отключен!");
+            return;
+        }
+
         if (state == 5) {
             timeoutTimer--;
             if (timeoutTimer == 30) {
@@ -239,12 +309,21 @@ public class OptiSniper {
                     boolean found = false;
                     for (int i = 0; i < 36; i++) {
                         if (cleanDisplayName(mc.player.getInventory().getItem(i)).equals(job.itemName)) {
-                            if (i >= 9) mc.gameMode.handleInventoryMouseClick(mc.player.inventoryMenu.containerId, i, 0, ClickType.SWAP, mc.player);
-                            else mc.player.getInventory().selected = i;
+                            restoreSlotTarget = mc.player.getInventory().selected;
+                            if (i >= 9) {
+                                mc.gameMode.handleInventoryMouseClick(mc.player.inventoryMenu.containerId, i, 8, ClickType.SWAP, mc.player);
+                                mc.player.getInventory().selected = 8;
+                            } else {
+                                mc.player.getInventory().selected = i;
+                            }
                             found = true; break;
                         }
                     }
-                    if (found && mc.getConnection() != null) { mc.getConnection().sendCommand("ah sell " + job.sellPrice); activeSellSlots++; }
+                    if (found && mc.getConnection() != null) { 
+                        mc.getConnection().sendCommand("ah sell " + job.sellPrice); 
+                        activeSellSlots++; 
+                        restoreSlotTimer = 10;
+                    }
                 }
             } else if (timeoutTimer <= 0) {
                 autoSellQueue.poll();
