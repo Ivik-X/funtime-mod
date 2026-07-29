@@ -95,6 +95,30 @@
           "src/main/java/net/mcreator/funtimemod/OptiWarden.java"
         ]
       }
+    },
+    {
+      "name": "OptiMovement",
+      "type": "code",
+      "compiles": true,
+      "locked_code": true,
+      "registry_name": "opti_movement",
+      "metadata": {
+        "files": [
+          "src/main/java/net/mcreator/funtimemod/OptiMovement.java"
+        ]
+      }
+    },
+    {
+      "name": "OptiVisuals",
+      "type": "code",
+      "compiles": true,
+      "locked_code": true,
+      "registry_name": "opti_visuals",
+      "metadata": {
+        "files": [
+          "src/main/java/net/mcreator/funtimemod/OptiVisuals.java"
+        ]
+      }
     }
   ],
   "variable_elements": [],

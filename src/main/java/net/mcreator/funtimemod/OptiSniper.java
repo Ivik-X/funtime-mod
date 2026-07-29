@@ -114,12 +114,15 @@ public class OptiSniper {
 
     public static void executeQuickBuy(AbstractContainerScreen<?> container) {
         int bestSlot = -1;
-        long lowestPrice = Long.MAX_VALUE;
+        long lowestPricePerUnit = Long.MAX_VALUE;
         for (int i = 0; i < 45 && i < container.getMenu().slots.size(); i++) {
             Slot slot = container.getMenu().slots.get(i);
             if (slot.getItem().isEmpty()) continue;
             long price = parsePrice(slot.getItem());
-            if (price > 0 && price < lowestPrice) { lowestPrice = price; bestSlot = i; }
+            if (price > 0) {
+                long perUnit = price / slot.getItem().getCount(); // ВЫЧИСЛЕНИЕ ЗА 1 ШТ
+                if (perUnit < lowestPricePerUnit) { lowestPricePerUnit = perUnit; bestSlot = i; }
+            }
         }
         if (bestSlot != -1) {
             Minecraft.getInstance().gameMode.handleInventoryMouseClick(container.getMenu().containerId, bestSlot, 0, ClickType.QUICK_MOVE, Minecraft.getInstance().player);
