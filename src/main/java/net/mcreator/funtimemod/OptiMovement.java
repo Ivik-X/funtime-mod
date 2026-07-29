@@ -63,7 +63,7 @@ public class OptiMovement {
 
             event.getInput().forwardImpulse = (isUp ? 1.0f : 0.0f) - (isDown ? 1.0f : 0.0f);
             event.getInput().leftImpulse = (isLeft ? 1.0f : 0.0f) - (isRight ? 1.0f : 0.0f);
-            if (isJump && mc.player.onGround()) mc.player.jumpFromGround();
+            mc.player.setJumping(isJump);
         }
         
         // Во время FreeCam мы ПОЛНОСТЬЮ глушим инпуты к реальному игроку (Без удаленных переменных)
@@ -81,8 +81,6 @@ public class OptiMovement {
         long window = mc.getWindow().getWindow();
 
         if (isFreecam) {
-            mc.player.setDeltaMovement(0, mc.player.getDeltaMovement().y, 0);
-
             if (mc.screen == null) {
                 fcYaw = mc.player.getYRot(); fcPitch = mc.player.getXRot();
                 double speed = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_CONTROL) ? 2.5 : 1.0;

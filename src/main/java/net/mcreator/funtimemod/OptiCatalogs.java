@@ -45,21 +45,20 @@ public class OptiCatalogs extends Screen {
                 String name = stack.getHoverName().getString().toLowerCase();
                 if (query.isEmpty() || name.contains(query.toLowerCase())) displayItems.add(stack);
             }
-        } else if (mode.equals("potions")) {
+        } else if (mode.equals("potions") || mode.equals("autoswap") || mode.equals("elytraswap") || mode.equals("autosell")) {
             if (mc.player != null) {
                 for (int i = 0; i < mc.player.getInventory().getContainerSize(); i++) {
                     ItemStack stack = mc.player.getInventory().getItem(i);
-                    if (stack.getItem() instanceof net.minecraft.world.item.SplashPotionItem) {
-                        boolean exists = false;
-                        for (ItemStack d : displayItems) { if (d.getHoverName().getString().equals(stack.getHoverName().getString())) { exists = true; break; } }
-                        if (!exists) displayItems.add(stack.copy());
-                    }
+                    if (stack.isEmpty() || stack.getItem() == Items.AIR) continue;
+                    if (mode.equals("potions") && !(stack.getItem() instanceof net.minecraft.world.item.SplashPotionItem)) continue;
+                    boolean exists = false;
+                    for (ItemStack d : displayItems) { if (d.getHoverName().getString().equals(stack.getHoverName().getString())) { exists = true; break; } }
+                    if (!exists) displayItems.add(stack.copy());
                 }
             }
         } else if (mode.equals("cheap") || mode.equals("targets")) {
-            for (net.minecraft.world.item.Item item : BuiltInRegistries.ITEM) {
-                ItemStack stack = new ItemStack(item);
-                if (stack.isEmpty() || stack.getItem() == Items.AIR) continue;
+            for (ItemStack stack : OptiSniper.seenItemsCache.values()) {
+                if (stack == null || stack.isEmpty()) continue;
                 String name = stack.getHoverName().getString().toLowerCase();
                 if (query.isEmpty() || name.contains(query.toLowerCase())) displayItems.add(stack);
             }
@@ -98,6 +97,18 @@ public class OptiCatalogs extends Screen {
                     String name = stack.getHoverName().getString();
                     if (OptiConfig.settings.autoBuffPotions.contains(name)) OptiConfig.settings.autoBuffPotions.remove(name);
                     else OptiConfig.settings.autoBuffPotions.add(name);
+                } else if (mode.equals("autoswap")) {
+                    String name = stack.getHoverName().getString();
+                    if (OptiConfig.settings.autoSwapItems.contains(name)) OptiConfig.settings.autoSwapItems.remove(name);
+                    else OptiConfig.settings.autoSwapItems.add(name);
+                } else if (mode.equals("elytraswap")) {
+                    String name = stack.getHoverName().getString();
+                    if (OptiConfig.settings.elytraSwapItems.contains(name)) OptiConfig.settings.elytraSwapItems.remove(name);
+                    else OptiConfig.settings.elytraSwapItems.add(name);
+                } else if (mode.equals("autosell")) {
+                    String name = stack.getHoverName().getString().replaceAll("§[0-9a-fk-or]", "").trim();
+                    if (OptiConfig.settings.autoSellItems.contains(name)) OptiConfig.settings.autoSellItems.remove(name);
+                    else OptiConfig.settings.autoSellItems.add(name);
                 } else if (mode.equals("cheap")) {
                     String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
                     if (OptiConfig.settings.autoCheapItems.contains(id)) OptiConfig.settings.autoCheapItems.remove(id);
@@ -130,6 +141,9 @@ public class OptiCatalogs extends Screen {
             boolean isSelected = false;
             if (mode.equals("blocks")) isSelected = OptiConfig.settings.blockEspList.contains(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
             else if (mode.equals("potions")) isSelected = OptiConfig.settings.autoBuffPotions.contains(stack.getHoverName().getString());
+            else if (mode.equals("autoswap")) isSelected = OptiConfig.settings.autoSwapItems.contains(stack.getHoverName().getString());
+            else if (mode.equals("elytraswap")) isSelected = OptiConfig.settings.elytraSwapItems.contains(stack.getHoverName().getString());
+            else if (mode.equals("autosell")) isSelected = OptiConfig.settings.autoSellItems.contains(stack.getHoverName().getString().replaceAll("§[0-9a-fk-or]", "").trim());
             else if (mode.equals("cheap")) isSelected = OptiConfig.settings.autoCheapItems.contains(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
             else if (mode.equals("targets")) {
                 String cleanName = stack.getHoverName().getString().replaceAll("§[0-9a-fk-or]", "").trim();
@@ -139,6 +153,20 @@ public class OptiCatalogs extends Screen {
             if (isSelected) g.fill(x - 2, y - 2, x + 18, y + 18, 0x6600FF00);
             
             g.renderItem(stack, x, y);
+            
+            if (mode.equals("targets") || mode.equals("cheap")) {
+                String cleanName = stack.getHoverName().getString().replaceAll("§[0-9a-fk-or]", "").trim();
+                OptiConfig.MarketEntry entry = OptiConfig.catalog.marketPrices.get(cleanName);
+                if (entry != null && entry.avgMin > 0) {
+                    g.pose().pushPose();
+                    g.pose().translate(x, y + 15, 200);
+                    g.pose().scale(0.5f, 0.5f, 0.5f);
+                    String pText = entry.avgMin / 1000 + "k";
+                    g.drawString(this.font, pText, 0, 0, 0xFFFF55);
+                    g.pose().popPose();
+                }
+            }
+            
             if (mouseX >= x && mouseX <= x + 20 && mouseY >= y && mouseY <= y + 20) g.renderTooltip(this.font, stack, mouseX, mouseY);
             
             col++; if (col > 9) { col = 0; row++; }

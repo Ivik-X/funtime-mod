@@ -26,6 +26,8 @@ import java.util.*;
 public class OptiSniper {
 
     private static boolean isBotActive = false;
+    private static int afkWalkTimer = 0;
+    private static int relistTimer = 0;
 
     private static int activeSellSlots = 0, state = 0, timeoutTimer = 0, refreshClickCount = 0;
     private static String lastSlot44State = "", expectedId = "", expectedCleanName = "";
@@ -41,7 +43,7 @@ public class OptiSniper {
     
     private static Queue<OptiConfig.AutoSellJob> autoSellQueue = new LinkedList<>();
     public static final Queue<Integer> smartLootQueue = new LinkedList<>();
-    private static final Set<String> seenLotsCache = new LinkedHashSet<>();
+    public static final Map<String, ItemStack> seenItemsCache = new java.util.concurrent.ConcurrentHashMap<>();
     private static int clickDelay = 0;
 
     private static Screen lastScreen = null;
@@ -101,9 +103,10 @@ public class OptiSniper {
             if (event.getKey() == GLFW.GLFW_KEY_J && Screen.hasControlDown() && mc.screen instanceof AbstractContainerScreen<?>) {
                 isBotActive = !isBotActive;
                 if (isBotActive) {
-                    autoSellQueue.clear(); seenLotsCache.clear();
+                    autoSellQueue.clear(); seenItemsCache.clear();
                     currentSyncTarget = (System.currentTimeMillis() - lastFullAnalysisTime < 15 * 60 * 1000) ? 10 : 50;
                     isInitialPriceSync = true; initialPriceSyncDoneCount = 0; state = 1; refreshClickCount = 0;
+                    relistTimer = 1300; afkWalkTimer = 600; 
                     sendMessage("§a[OptiItem] Анализ запущен (" + currentSyncTarget + " стр).");
                 } else {
                     state = 0; OptiConfig.saveAll(); sendMessage("§c[OptiItem] Процесс остановлен. Кэш сохранен.");
@@ -186,12 +189,21 @@ public class OptiSniper {
 
             if (lastScreen != mc.screen) {
                 if (OptiConfig.settings.autoStealOnOpen || expectingWardenLoot) {
-                    autoStealTimer = 5; 
+                    autoStealTimer = expectingWardenLoot ? 40 : 5; 
                 }
             }
             
             if (autoStealTimer > 0) {
-                autoStealTimer--;
+                if (expectingWardenLoot) {
+                    boolean hasItems = false;
+                    for (int i = 0; i < container.getMenu().slots.size() - 36; i++) {
+                        if (!container.getMenu().slots.get(i).getItem().isEmpty()) { hasItems = true; break; }
+                    }
+                    if (hasItems) autoStealTimer = 1;
+                    else autoStealTimer--;
+                } else {
+                    autoStealTimer--;
+                }
                 if (autoStealTimer == 0) {
                     triggerSmartLoot(container);
                     isAutoStealing = true;
@@ -242,8 +254,51 @@ public class OptiSniper {
             return;
         }
 
+        if (state == 6) { 
+            timeoutTimer--;
+            if (timeoutTimer == 35) clickSlot(mc.screen instanceof AbstractContainerScreen<?> s ? s : null, 46);
+            else if (timeoutTimer == 20) clickSlot(mc.screen instanceof AbstractContainerScreen<?> s ? s : null, 52);
+            else if (timeoutTimer == 5) clickSlot(mc.screen instanceof AbstractContainerScreen<?> s ? s : null, 46);
+            else if (timeoutTimer <= 0) { mc.player.closeContainer(); state = 4; timeoutTimer = 20; }
+            return;
+        }
+
         if (!(mc.screen instanceof AbstractContainerScreen<?> containerScreen)) {
-            if (state != 4 && state != 5) { isBotActive = false; state = 0; OptiConfig.saveAll(); } return;
+            if (state != 4 && state != 5 && state != 6) { 
+                afkWalkTimer--;
+                if (afkWalkTimer <= 0 && OptiConfig.settings.autoRelist) {
+                    mc.player.setDeltaMovement(new net.minecraft.world.phys.Vec3(Math.random() * 0.4 - 0.2, mc.player.getDeltaMovement().y, Math.random() * 0.4 - 0.2));
+                    afkWalkTimer = 600;
+                }
+                
+                if (OptiConfig.settings.autoSell && activeSellSlots < 5 && autoSellQueue.isEmpty()) {
+                    for (int i = 0; i < 36; i++) {
+                        ItemStack stack = mc.player.getInventory().getItem(i);
+                        if (!stack.isEmpty()) {
+                            String name = cleanDisplayName(stack);
+                            if (OptiConfig.settings.autoSellItems.contains(name)) {
+                                OptiConfig.MarketEntry entry = OptiConfig.catalog.marketPrices.get(name);
+                                if (entry != null && entry.avgMin > 0) {
+                                    long sellPrice = (long)(entry.avgMin * OptiConfig.settings.autoFarmSellMultiplier);
+                                    autoSellQueue.add(new OptiConfig.AutoSellJob(name, sellPrice));
+                                    break; 
+                                }
+                            }
+                        }
+                    }
+                    if (!autoSellQueue.isEmpty()) {
+                        if (mc.getConnection() != null) mc.getConnection().sendCommand("ah");
+                        state = 5; timeoutTimer = 40; return;
+                    }
+                }
+
+                relistTimer--;
+                if (relistTimer <= 0 && OptiConfig.settings.autoRelist && activeSellSlots > 0) {
+                    if (mc.getConnection() != null) mc.getConnection().sendCommand("ah");
+                    state = 6; timeoutTimer = 50; relistTimer = 1300; 
+                }
+            } 
+            return;
         }
 
         if (state == 1) {
@@ -339,6 +394,10 @@ public class OptiSniper {
         for (ItemStack item : pageItems) {
             String name = cleanDisplayName(item); long price = parsePrice(item);
             if (price > 0) { long perUnit = price / item.getCount(); if (!pageMins.containsKey(name) || perUnit < pageMins.get(name)) pageMins.put(name, perUnit); }
+            seenItemsCache.put(name, item.copy());
+            if (net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item.getItem()) != null) {
+                OptiConfig.catalog.cachedItemIds.put(name, net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item.getItem()).toString());
+            }
         }
         for (Map.Entry<String, Long> entry : pageMins.entrySet()) {
             OptiConfig.MarketEntry mEntry = OptiConfig.catalog.marketPrices.computeIfAbsent(entry.getKey(), k -> new OptiConfig.MarketEntry());
@@ -378,5 +437,5 @@ public class OptiSniper {
 
     private static void clickSlot(AbstractContainerScreen<?> screen, int slotId) { Minecraft mc = Minecraft.getInstance(); mc.gameMode.handleInventoryMouseClick(screen.getMenu().containerId, slotId, 0, ClickType.PICKUP, mc.player); }
     private static String getSlotState(Slot slot) { return slot.getItem().isEmpty() ? "empty" : slot.getItem().getCount() + "_" + slot.getItem().getComponents().hashCode(); }
-    private static void sendMessage(String text) { if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.displayClientMessage(Component.literal(text), false); }
+    private static void sendMessage(String text) { if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.displayClientMessage(Component.literal(text.replace("[OptiItem]", "Система")), true); }
 }

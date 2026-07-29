@@ -103,17 +103,27 @@ public class OptiVisuals {
         }
 
         if (OptiConfig.settings.radar) {
-            int cx = width / 2; int cy = height / 2;
             float yaw = mc.player.getYRot();
-            for (Player p : mc.level.players()) {
-                if (p == mc.player) continue;
-                double dx = p.getX() - mc.player.getX(); double dz = p.getZ() - mc.player.getZ();
-                float angle = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90 - yaw;
+            for (Player entity : mc.level.players()) {
+                if (entity == mc.player) continue;
+                double dx = entity.getX() - mc.player.getX(); double dz = entity.getZ() - mc.player.getZ();
+                double angle = Math.toDegrees(Math.atan2(dz, dx)) - yaw - 90;
                 double rad = Math.toRadians(angle);
-                int radius = 60; 
-                int drawX = (int) (cx + Math.cos(rad) * radius); int drawY = (int) (cy + Math.sin(rad) * radius);
-                g.fill(drawX - 2, drawY - 2, drawX + 2, drawY + 2, 0xFFFF0000);
+                float cx = mc.getWindow().getGuiScaledWidth() / 2f + (float) (Math.cos(rad) * 60);
+                float cy = mc.getWindow().getGuiScaledHeight() / 2f + (float) (Math.sin(rad) * 60);
+                        
+                event.getGuiGraphics().pose().pushPose();
+                event.getGuiGraphics().pose().translate(cx, cy, 0);
+                event.getGuiGraphics().pose().mulPose(com.mojang.math.Axis.ZP.rotationDegrees((float)angle + 90));
+                com.mojang.blaze3d.vertex.VertexConsumer triBuilder = mc.renderBuffers().bufferSource().getBuffer(net.minecraft.client.renderer.RenderType.gui());
+                org.joml.Matrix4f p = event.getGuiGraphics().pose().last().pose();
+                triBuilder.addVertex(p, 0, -4, 0).setColor(255, 0, 0, 255);
+                triBuilder.addVertex(p, 3, 3, 0).setColor(255, 0, 0, 255);
+                triBuilder.addVertex(p, -3, 3, 0).setColor(255, 0, 0, 255);
+                triBuilder.addVertex(p, -3, 3, 0).setColor(255, 0, 0, 255);
+                event.getGuiGraphics().pose().popPose();
             }
+            mc.renderBuffers().bufferSource().endBatch(net.minecraft.client.renderer.RenderType.gui());
         }
     }
 
@@ -126,15 +136,34 @@ public class OptiVisuals {
         Vec3 cam = event.getCamera().getPosition();
         
         // РЕНДЕР ЛИНИЙ (Идеально работает сквозь стены)
-        com.mojang.blaze3d.vertex.VertexConsumer consumer = mc.renderBuffers().bufferSource().getBuffer(net.minecraft.client.renderer.RenderType.gui());
+        com.mojang.blaze3d.vertex.VertexConsumer consumer = mc.renderBuffers().bufferSource().getBuffer(net.minecraft.client.renderer.RenderType.guiOverlay());
         RenderSystem.disableDepthTest();
 
         if (OptiConfig.settings.blockEspEnabled && !espBlocks.isEmpty()) {
+            com.mojang.blaze3d.systems.RenderSystem.depthMask(false);
             for (BlockPos pos : espBlocks) {
+                if (OptiConfig.settings.wardenEsp && OptiWarden.trackedChests.containsKey(pos)) {
+                    OptiWarden.WardenChest wc = OptiWarden.trackedChests.get(pos);
+                    if (wc != null && wc.getRemaining() <= OptiConfig.settings.wardenEspTime && wc.getRemaining() > 0) continue;
+                }
                 pose.pushPose();
-                drawLines(pose, consumer, pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z, 0, 255, 255, 255); 
+                drawBox(pose, consumer, pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z, 0, 255, 255, 50); 
                 pose.popPose();
             }
+            com.mojang.blaze3d.systems.RenderSystem.depthMask(true);
+        }
+        
+        if (OptiConfig.settings.playerEsp) {
+            com.mojang.blaze3d.systems.RenderSystem.depthMask(false);
+            for (net.minecraft.world.entity.player.Player entity : mc.level.players()) {
+                if (entity != mc.player) {
+                    pose.pushPose();
+                    float w = entity.getBbWidth(); float h = entity.getBbHeight();
+                    drawCustomBox(pose, consumer, entity.getX() - cam.x - w/2, entity.getY() - cam.y, entity.getZ() - cam.z - w/2, w, h, 255, 50, 50, 80);
+                    pose.popPose();
+                }
+            }
+            com.mojang.blaze3d.systems.RenderSystem.depthMask(true);
         }
 
         if (OptiConfig.settings.trajectories) {
@@ -168,34 +197,40 @@ public class OptiVisuals {
 
                 if (hitBlock != null) {
                     pose.pushPose();
-                    drawLines(pose, consumer, hitBlock.getX() - cam.x, hitBlock.getY() - cam.y, hitBlock.getZ() - cam.z, 0, 100, 255, 255);
+                    drawBox(pose, consumer, hitBlock.getX() - cam.x, hitBlock.getY() - cam.y, hitBlock.getZ() - cam.z, 0, 100, 255, 100);
                     pose.popPose();
                 }
             }
         }
         
-        mc.renderBuffers().bufferSource().endBatch(net.minecraft.client.renderer.RenderType.gui());
+        mc.renderBuffers().bufferSource().endBatch(net.minecraft.client.renderer.RenderType.guiOverlay());
         RenderSystem.enableDepthTest();
     }
 
-    private static void drawLines(PoseStack pose, com.mojang.blaze3d.vertex.VertexConsumer c, double x, double y, double z, int r, int g, int b, int a) {
-        org.joml.Matrix4f m = pose.last().pose(); 
-        float pad = 0.02f; // Инфляция, чтобы блок было видно
-        float x1 = (float)x - pad, y1 = (float)y - pad, z1 = (float)z - pad;
-        float x2 = (float)x + 1.0f + pad, y2 = (float)y + 1.0f + pad, z2 = (float)z + 1.0f + pad;
-        float w = 0.02f; // Толщина линий
-        
-        // Рисуем 12 ребер как тонкие прямоугольники (чтобы не зависеть от режима линий OpenGL)
-        quad(m, c, x1, y1, z1, x2, y1+w, z1+w, r, g, b, a); quad(m, c, x1, y2-w, z1, x2, y2, z1+w, r, g, b, a);
-        quad(m, c, x1, y1, z2-w, x2, y1+w, z2, r, g, b, a); quad(m, c, x1, y2-w, z2-w, x2, y2, z2, r, g, b, a);
-        quad(m, c, x1, y1, z1, x1+w, y2, z1+w, r, g, b, a); quad(m, c, x2-w, y1, z1, x2, y2, z1+w, r, g, b, a);
-        quad(m, c, x1, y1, z2-w, x1+w, y2, z2, r, g, b, a); quad(m, c, x2-w, y1, z2-w, x2, y2, z2, r, g, b, a);
-        quad(m, c, x1, y1, z1, x1+w, y1+w, z2, r, g, b, a); quad(m, c, x2-w, y1, z1, x2, y1+w, z2, r, g, b, a);
-        quad(m, c, x1, y2-w, z1, x1+w, y2, z2, r, g, b, a); quad(m, c, x2-w, y2-w, z1, x2, y2, z2, r, g, b, a);
+    public static void drawBox(PoseStack pose, com.mojang.blaze3d.vertex.VertexConsumer c, double x, double y, double z, int r, int g, int b, int a) {
+        drawCustomBox(pose, c, x, y, z, 1.0f, 1.0f, r, g, b, a);
     }
     
-    private static void quad(org.joml.Matrix4f m, com.mojang.blaze3d.vertex.VertexConsumer c, float x1, float y1, float z1, float x2, float y2, float z2, int r, int g, int b, int a) {
-        c.addVertex(m, x1, y1, z1).setColor(r, g, b, a); c.addVertex(m, x2, y1, z1).setColor(r, g, b, a);
-        c.addVertex(m, x2, y2, z2).setColor(r, g, b, a); c.addVertex(m, x1, y2, z2).setColor(r, g, b, a);
+    public static void drawCustomBox(PoseStack pose, com.mojang.blaze3d.vertex.VertexConsumer c, double x, double y, double z, float w, float h, int r, int g, int b, int a) {
+        org.joml.Matrix4f m = pose.last().pose(); 
+        float pad = 0.02f; 
+        float x1 = (float)x - pad, y1 = (float)y - pad, z1 = (float)z - pad;
+        float x2 = (float)x + w + pad, y2 = (float)y + h + pad, z2 = (float)z + w + pad;
+        
+        // Рисуем 6 граней блока (внешние и внутренние для видимости изнутри)
+        addQuad(m, c, x1,y1,z1, x2,y1,z1, x2,y1,z2, x1,y1,z2, r, g, b, a); // Bottom
+        addQuad(m, c, x1,y2,z1, x1,y2,z2, x2,y2,z2, x2,y2,z1, r, g, b, a); // Top
+        addQuad(m, c, x1,y1,z1, x1,y2,z1, x2,y2,z1, x2,y1,z1, r, g, b, a); // North
+        addQuad(m, c, x1,y1,z2, x2,y1,z2, x2,y2,z2, x1,y2,z2, r, g, b, a); // South
+        addQuad(m, c, x1,y1,z1, x1,y1,z2, x1,y2,z2, x1,y2,z1, r, g, b, a); // West
+        addQuad(m, c, x2,y1,z1, x2,y2,z1, x2,y2,z2, x2,y1,z2, r, g, b, a); // East
+    }
+    
+    public static void addQuad(org.joml.Matrix4f m, com.mojang.blaze3d.vertex.VertexConsumer c, float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4, int r, int g, int b, int a) {
+        c.addVertex(m, x1, y1, z1).setColor(r, g, b, a); c.addVertex(m, x2, y2, z2).setColor(r, g, b, a);
+        c.addVertex(m, x3, y3, z3).setColor(r, g, b, a); c.addVertex(m, x4, y4, z4).setColor(r, g, b, a);
+        // Reversed order for backface
+        c.addVertex(m, x4, y4, z4).setColor(r, g, b, a); c.addVertex(m, x3, y3, z3).setColor(r, g, b, a);
+        c.addVertex(m, x2, y2, z2).setColor(r, g, b, a); c.addVertex(m, x1, y1, z1).setColor(r, g, b, a);
     }
 }

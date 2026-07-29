@@ -33,6 +33,7 @@ public class OptiWarden {
     public static class WardenChest {
         public int initialSeconds;
         public long syncTime;
+        public boolean opened = false;
         public int getRemaining() { return initialSeconds - (int)((System.currentTimeMillis() - syncTime) / 1000); }
     }
 
@@ -73,12 +74,18 @@ public class OptiWarden {
 
         for (Map.Entry<BlockPos, WardenChest> entry : trackedChests.entrySet()) {
             BlockPos pos = entry.getKey();
-            if (entry.getValue().getRemaining() <= 0) {
-                if (OptiConfig.settings.wardenAutoOpen && mc.player.blockPosition().distSqr(pos) <= 36) { 
-                    mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
-                    OptiSniper.expectingWardenLoot = true; 
+            int rem = entry.getValue().getRemaining();
+            if (rem <= 0) {
+                if (!entry.getValue().opened) {
+                    if (OptiConfig.settings.wardenAutoOpen && mc.player.blockPosition().distSqr(pos) <= 36) { 
+                        mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
+                        OptiSniper.expectingWardenLoot = true; 
+                    }
+                    entry.getValue().opened = true;
                 }
-                trackedChests.remove(pos); 
+                if (rem < -2) {
+                    trackedChests.remove(pos); 
+                }
             }
         }
     }
@@ -101,8 +108,8 @@ public class OptiWarden {
 
         if (!hasVisibleChests) return;
 
-        // 1. РИСУЕМ КРАСНЫЕ КУБЫ (Используем RenderType.gui(), он игнорирует стены и не требует света)
-        com.mojang.blaze3d.vertex.VertexConsumer consumer = bufferSource.getBuffer(net.minecraft.client.renderer.RenderType.gui());
+        // 1. РИСУЕМ КРАСНЫЕ КУБЫ (Используем RenderType.guiOverlay(), он игнорирует стены и не требует света)
+        com.mojang.blaze3d.vertex.VertexConsumer consumer = bufferSource.getBuffer(net.minecraft.client.renderer.RenderType.guiOverlay());
         
         for (Map.Entry<BlockPos, WardenChest> entry : trackedChests.entrySet()) {
             int rem = entry.getValue().getRemaining();
@@ -117,13 +124,13 @@ public class OptiWarden {
                 double maxX = x + 1.0; double maxY = y + 1.0; double maxZ = z + 1.0;
 
                 poseStack.pushPose();
-                drawSolidBox(poseStack, consumer, minX, minY, minZ, maxX, maxY, maxZ, 255, 0, 0, 100);
+                OptiVisuals.drawBox(poseStack, consumer, x, y, z, 255, 0, 0, 100);
                 poseStack.popPose();
             }
         }
         
         // Принудительно отрисовываем кубы в мир
-        bufferSource.endBatch(net.minecraft.client.renderer.RenderType.gui());
+        bufferSource.endBatch(net.minecraft.client.renderer.RenderType.guiOverlay());
 
         // 2. РИСУЕМ ТАЙМЕР НАД СУНДУКОМ (ЧЕРЕЗ СТЕНЫ)
         for (Map.Entry<BlockPos, WardenChest> entry : trackedChests.entrySet()) {
@@ -142,32 +149,6 @@ public class OptiWarden {
         bufferSource.endBatch();
     }
 
-    private static void drawSolidBox(PoseStack poseStack, com.mojang.blaze3d.vertex.VertexConsumer consumer, double minX, double minY, double minZ, double maxX, double maxY, double maxZ, int r, int g, int b, int a) {
-        org.joml.Matrix4f pose = poseStack.last().pose();
-        float x1 = (float)minX, y1 = (float)minY, z1 = (float)minZ;
-        float x2 = (float)maxX, y2 = (float)maxY, z2 = (float)maxZ;
-        
-        drawFace(pose, consumer, x1, y2, z1, x2, y2, z1, x2, y1, z1, x1, y1, z1, r, g, b, a); // Front
-        drawFace(pose, consumer, x2, y2, z2, x1, y2, z2, x1, y1, z2, x2, y1, z2, r, g, b, a); // Back
-        drawFace(pose, consumer, x1, y2, z2, x1, y2, z1, x1, y1, z1, x1, y1, z2, r, g, b, a); // Left
-        drawFace(pose, consumer, x2, y2, z1, x2, y2, z2, x2, y1, z2, x2, y1, z1, r, g, b, a); // Right
-        drawFace(pose, consumer, x1, y2, z2, x2, y2, z2, x2, y2, z1, x1, y2, z1, r, g, b, a); // Top
-        drawFace(pose, consumer, x1, y1, z1, x2, y1, z1, x2, y1, z2, x1, y1, z2, r, g, b, a); // Bottom
-    }
-
-    private static void drawFace(org.joml.Matrix4f pose, com.mojang.blaze3d.vertex.VertexConsumer consumer, float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4, int r, int g, int b, int a) {
-        // Отрисовка внешней стороны
-        consumer.addVertex(pose, x1, y1, z1).setColor(r, g, b, a);
-        consumer.addVertex(pose, x2, y2, z2).setColor(r, g, b, a);
-        consumer.addVertex(pose, x3, y3, z3).setColor(r, g, b, a);
-        consumer.addVertex(pose, x4, y4, z4).setColor(r, g, b, a);
-        
-        // Отрисовка внутренней стороны (защищает от обрезания текстур под углом)
-        consumer.addVertex(pose, x4, y4, z4).setColor(r, g, b, a);
-        consumer.addVertex(pose, x3, y3, z3).setColor(r, g, b, a);
-        consumer.addVertex(pose, x2, y2, z2).setColor(r, g, b, a);
-        consumer.addVertex(pose, x1, y1, z1).setColor(r, g, b, a);
-    }
 
     @SubscribeEvent
     public static void onKey(InputEvent.Key event) {

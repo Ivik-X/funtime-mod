@@ -15,15 +15,9 @@ import java.nio.file.Files;
 
 @EventBusSubscriber(modid = "funtime_mod", value = Dist.CLIENT)
 public class OptiCore {
-    public static boolean isGloballyEnabled = true;
+    public static boolean isGloballyEnabled = false;
     private static boolean isDataLoaded = false;
     private static final File SYS_FILE = new File(Minecraft.getInstance().gameDirectory, "config/opti_sys.dat");
-
-    static {
-        try {
-            if (SYS_FILE.exists()) isGloballyEnabled = Boolean.parseBoolean(Files.readString(SYS_FILE.toPath()).trim());
-        } catch (Exception ignored) {}
-    }
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Pre event) {
@@ -42,9 +36,10 @@ public class OptiCore {
             if (!isGloballyEnabled) {
                 OptiRender.forceDisableGlow();
                 OptiRender.isFreecam = false;
+                if (mc.player != null) mc.player.removeEffect(net.minecraft.world.effect.MobEffects.NIGHT_VISION);
                 if (mc.gui != null && mc.gui.getChat() != null) mc.gui.getChat().clearMessages(false);
             } else if (mc.player != null) {
-                mc.player.displayClientMessage(Component.literal("§a[OptiItem] Render Cache Enabled."), false);
+                mc.player.displayClientMessage(Component.literal("§aОптимизация рендера включена."), true);
             }
             return;
         }

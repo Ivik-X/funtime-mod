@@ -29,7 +29,8 @@ public class OptiMenu extends Screen {
                 OptiConfig.settings.searchMode = OptiConfig.settings.searchMode.equals("auto_farm") ? "auto_cheap" : OptiConfig.settings.searchMode.equals("auto_cheap") ? "targeted" : "auto_farm"; 
                 switchTab("market", true); 
             }).bounds(cX - 100, sY, 200, 20).build());
-            this.addRenderableWidget(Button.builder(Component.literal("Автопродажа: " + (OptiConfig.settings.autoSell ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.autoSell = !OptiConfig.settings.autoSell; switchTab("market", true); }).bounds(cX - 100, sY + 25, 200, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Автопродажа: " + (OptiConfig.settings.autoSell ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.autoSell = !OptiConfig.settings.autoSell; switchTab("market", true); }).bounds(cX - 100, sY + 25, 120, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Предметы"), b -> { saveSettings(); this.minecraft.setScreen(new OptiCatalogs(this, "autosell")); }).bounds(cX + 25, sY + 25, 75, 20).build());
             
             if (OptiConfig.settings.searchMode.equals("auto_farm")) {
                 t1 = new EditBox(this.font, cX - 100, sY + 65, 95, 20, Component.literal("")); t1.setValue(String.valueOf(OptiConfig.settings.autoFarmBuyMultiplier)); this.addRenderableWidget(t1);
@@ -44,9 +45,12 @@ public class OptiMenu extends Screen {
             }
         }
         else if (currentTab.equals("combat")) {
-            this.addRenderableWidget(Button.builder(Component.literal("Aim Assist: " + (OptiConfig.settings.aimAssist ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.aimAssist = !OptiConfig.settings.aimAssist; switchTab("combat", true); }).bounds(cX - 100, sY, 200, 20).build());
-            this.addRenderableWidget(Button.builder(Component.literal("AutoBuff: " + (OptiConfig.settings.autoBuff ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.autoBuff = !OptiConfig.settings.autoBuff; switchTab("combat", true); }).bounds(cX - 100, sY + 25, 95, 20).build());
-            this.addRenderableWidget(Button.builder(Component.literal("Выбрать Зелья"), b -> { saveSettings(); this.minecraft.setScreen(new OptiCatalogs(this, "potions")); }).bounds(cX + 5, sY + 25, 95, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Aim Assist: " + (OptiConfig.settings.aimAssist ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.aimAssist = !OptiConfig.settings.aimAssist; switchTab("combat", true); }).bounds(cX - 100, sY, 95, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("AutoBuff: " + (OptiConfig.settings.autoBuff ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.autoBuff = !OptiConfig.settings.autoBuff; switchTab("combat", true); }).bounds(cX + 5, sY, 95, 20).build());
+            
+            this.addRenderableWidget(Button.builder(Component.literal("Зелья"), b -> { saveSettings(); this.minecraft.setScreen(new OptiCatalogs(this, "potions")); }).bounds(cX - 100, sY + 25, 60, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Свап"), b -> { saveSettings(); this.minecraft.setScreen(new OptiCatalogs(this, "autoswap")); }).bounds(cX - 35, sY + 25, 60, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Элитра"), b -> { saveSettings(); this.minecraft.setScreen(new OptiCatalogs(this, "elytraswap")); }).bounds(cX + 30, sY + 25, 60, 20).build());
             
             t1 = new EditBox(this.font, cX - 100, sY + 65, 95, 20, Component.literal("")); t1.setValue(String.valueOf(OptiConfig.settings.aimAssistFov)); this.addRenderableWidget(t1);
             t2 = new EditBox(this.font, cX + 5, sY + 65, 95, 20, Component.literal("")); t2.setValue(String.valueOf(OptiConfig.settings.aimAssistRange)); this.addRenderableWidget(t2);
@@ -58,26 +62,38 @@ public class OptiMenu extends Screen {
             this.addRenderableWidget(Button.builder(Component.literal("Trajectories: " + (OptiConfig.settings.trajectories ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.trajectories = !OptiConfig.settings.trajectories; switchTab("render", true); }).bounds(cX - 150, sY + 25, 145, 20).build());
             this.addRenderableWidget(Button.builder(Component.literal("Fullbright: " + (OptiConfig.settings.fullbright ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.fullbright = !OptiConfig.settings.fullbright; switchTab("render", true); }).bounds(cX + 5, sY + 25, 145, 20).build());
             
-            this.addRenderableWidget(Button.builder(Component.literal("Custom ViewModel: " + (OptiConfig.settings.customViewModel ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.customViewModel = !OptiConfig.settings.customViewModel; switchTab("render", true); }).bounds(cX - 150, sY + 50, 145, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Custom ViewModel: " + (OptiConfig.settings.customViewModel ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.customViewModel = !OptiConfig.settings.customViewModel; switchTab("render", true); }).bounds(cX - 150, sY + 50, 200, 20).build());
             
-            this.addRenderableWidget(Button.builder(Component.literal("Mini"), b -> { setVm(0,-0.2,0, 0,0,0, 0.6); switchTab("render", false); }).bounds(cX + 5, sY + 50, 45, 20).build());
-            this.addRenderableWidget(Button.builder(Component.literal("Gang"), b -> { setVm(-0.15, 0.3, -0.2, 0, -45, 0, 1.0); switchTab("render", false); }).bounds(cX + 55, sY + 50, 45, 20).build());
-            this.addRenderableWidget(Button.builder(Component.literal("Katana"), b -> { setVm(0.2, -0.3, 0.1, 15, -15, 0, 1.4); switchTab("render", false); }).bounds(cX + 105, sY + 50, 45, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Стандарт"), b -> { t1.setValue("0.0"); t2.setValue("0.0"); t3.setValue("0.0"); t4.setValue("0.0"); t5.setValue("0.0"); t6.setValue("0.0"); t7.setValue("1.0"); }).bounds(cX - 150, sY + 75, 75, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Мини"), b -> { t1.setValue("0.2"); t2.setValue("-0.4"); t3.setValue("-0.5"); t4.setValue("0.0"); t5.setValue("0.0"); t6.setValue("0.0"); t7.setValue("0.6"); }).bounds(cX - 70, sY + 75, 70, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Катана"), b -> { t1.setValue("0.5"); t2.setValue("-0.5"); t3.setValue("-0.8"); t4.setValue("0.0"); t5.setValue("-10.0"); t6.setValue("0.0"); t7.setValue("1.3"); }).bounds(cX + 5, sY + 75, 70, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Дельта"), b -> { t1.setValue("0.3"); t2.setValue("-0.2"); t3.setValue("-0.1"); t4.setValue("0.0"); t5.setValue("0.0"); t6.setValue("-45.0"); t7.setValue("0.9"); }).bounds(cX + 80, sY + 75, 70, 20).build());
             
-            t1 = new EditBox(this.font, cX - 150, sY + 90, 45, 20, Component.literal("")); t1.setValue(String.valueOf(OptiConfig.settings.vmX)); this.addRenderableWidget(t1);
-            t2 = new EditBox(this.font, cX - 100, sY + 90, 45, 20, Component.literal("")); t2.setValue(String.valueOf(OptiConfig.settings.vmY)); this.addRenderableWidget(t2);
-            t3 = new EditBox(this.font, cX - 50, sY + 90, 45, 20, Component.literal("")); t3.setValue(String.valueOf(OptiConfig.settings.vmZ)); this.addRenderableWidget(t3);
-            t4 = new EditBox(this.font, cX + 5, sY + 90, 45, 20, Component.literal("")); t4.setValue(String.valueOf(OptiConfig.settings.vmPitch)); this.addRenderableWidget(t4);
-            t5 = new EditBox(this.font, cX + 55, sY + 90, 45, 20, Component.literal("")); t5.setValue(String.valueOf(OptiConfig.settings.vmYaw)); this.addRenderableWidget(t5);
-            t6 = new EditBox(this.font, cX + 105, sY + 90, 45, 20, Component.literal("")); t6.setValue(String.valueOf(OptiConfig.settings.vmRoll)); this.addRenderableWidget(t6);
-            t7 = new EditBox(this.font, cX - 25, sY + 130, 50, 20, Component.literal("")); t7.setValue(String.valueOf(OptiConfig.settings.vmScale)); this.addRenderableWidget(t7);
+            t1 = new EditBox(this.font, cX - 150, sY + 120, 45, 20, Component.literal("")); t1.setValue(String.valueOf(OptiConfig.settings.vmX)); this.addRenderableWidget(t1);
+            t2 = new EditBox(this.font, cX - 100, sY + 120, 45, 20, Component.literal("")); t2.setValue(String.valueOf(OptiConfig.settings.vmY)); this.addRenderableWidget(t2);
+            t3 = new EditBox(this.font, cX - 50, sY + 120, 45, 20, Component.literal("")); t3.setValue(String.valueOf(OptiConfig.settings.vmZ)); this.addRenderableWidget(t3);
+            t4 = new EditBox(this.font, cX + 5, sY + 120, 45, 20, Component.literal("")); t4.setValue(String.valueOf(OptiConfig.settings.vmPitch)); this.addRenderableWidget(t4);
+            t5 = new EditBox(this.font, cX + 55, sY + 120, 45, 20, Component.literal("")); t5.setValue(String.valueOf(OptiConfig.settings.vmYaw)); this.addRenderableWidget(t5);
+            t6 = new EditBox(this.font, cX + 105, sY + 120, 45, 20, Component.literal("")); t6.setValue(String.valueOf(OptiConfig.settings.vmRoll)); this.addRenderableWidget(t6);
+            t7 = new EditBox(this.font, cX - 25, sY + 160, 50, 20, Component.literal("")); t7.setValue(String.valueOf(OptiConfig.settings.vmScale)); this.addRenderableWidget(t7);
         }
         else if (currentTab.equals("world")) {
             this.addRenderableWidget(Button.builder(Component.literal("Block ESP: " + (OptiConfig.settings.blockEspEnabled ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.blockEspEnabled = !OptiConfig.settings.blockEspEnabled; switchTab("world", true); }).bounds(cX - 100, sY, 95, 20).build());
             this.addRenderableWidget(Button.builder(Component.literal("Выбрать Блоки"), b -> { saveSettings(); this.minecraft.setScreen(new OptiCatalogs(this, "blocks")); }).bounds(cX + 5, sY, 95, 20).build());
+            
+            this.addRenderableWidget(Button.builder(Component.literal("Warden ESP: " + (OptiConfig.settings.wardenEsp ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.wardenEsp = !OptiConfig.settings.wardenEsp; switchTab("world", true); }).bounds(cX - 100, sY + 25, 95, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Warden AutoOpen: " + (OptiConfig.settings.wardenAutoOpen ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.wardenAutoOpen = !OptiConfig.settings.wardenAutoOpen; switchTab("world", true); }).bounds(cX + 5, sY + 25, 95, 20).build());
+
+            this.addRenderableWidget(Button.builder(Component.literal("Player ESP: " + (OptiConfig.settings.playerEsp ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.playerEsp = !OptiConfig.settings.playerEsp; switchTab("world", true); }).bounds(cX - 100, sY + 50, 95, 20).build());
+
+            t1 = new EditBox(this.font, cX - 100, sY + 90, 95, 20, Component.literal("")); t1.setValue(String.valueOf(OptiConfig.settings.wardenEspTime)); this.addRenderableWidget(t1);
         }
         else if (currentTab.equals("misc")) {
             this.addRenderableWidget(Button.builder(Component.literal("InvMove: " + (OptiConfig.settings.inventoryMove ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.inventoryMove = !OptiConfig.settings.inventoryMove; switchTab("misc", true); }).bounds(cX - 100, sY, 200, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Auto Steal (Chests): " + (OptiConfig.settings.autoStealOnOpen ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.autoStealOnOpen = !OptiConfig.settings.autoStealOnOpen; switchTab("misc", true); }).bounds(cX - 100, sY + 25, 200, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Цены в тултипах: " + (OptiConfig.settings.marketTooltips ? "§aВКЛ" : "§cВЫКЛ")), b -> { OptiConfig.settings.marketTooltips = !OptiConfig.settings.marketTooltips; switchTab("misc", true); }).bounds(cX - 100, sY + 50, 200, 20).build());
+            
+            t1 = new EditBox(this.font, cX - 100, sY + 90, 200, 20, Component.literal("")); t1.setValue(String.valueOf(OptiConfig.settings.smartLootMinPrice)); this.addRenderableWidget(t1);
         }
 
         this.addRenderableWidget(Button.builder(Component.literal("§aПрименить и Закрыть"), b -> { saveSettings(); this.onClose(); }).bounds(cX - 100, this.height - 30, 200, 20).build());
@@ -108,6 +124,10 @@ public class OptiMenu extends Screen {
                 OptiConfig.settings.vmX = Double.parseDouble(t1.getValue()); OptiConfig.settings.vmY = Double.parseDouble(t2.getValue()); OptiConfig.settings.vmZ = Double.parseDouble(t3.getValue());
                 OptiConfig.settings.vmPitch = Double.parseDouble(t4.getValue()); OptiConfig.settings.vmYaw = Double.parseDouble(t5.getValue()); OptiConfig.settings.vmRoll = Double.parseDouble(t6.getValue());
                 OptiConfig.settings.vmScale = Double.parseDouble(t7.getValue());
+            } else if (currentTab.equals("world") && t1 != null) {
+                OptiConfig.settings.wardenEspTime = Integer.parseInt(t1.getValue());
+            } else if (currentTab.equals("misc") && t1 != null) {
+                OptiConfig.settings.smartLootMinPrice = Long.parseLong(t1.getValue());
             }
             OptiConfig.saveAll();
         } catch (Exception ignored) {}
@@ -119,14 +139,18 @@ public class OptiMenu extends Screen {
         int sY = 40, cX = this.width / 2;
 
         if (currentTab.equals("market")) {
-            if (!OptiConfig.settings.searchMode.equals("targeted")) guiGraphics.drawString(this.font, "Купить | Продать множитель:", cX - 100, sY + 53, 0xAAAAAA);
-            if (OptiConfig.settings.searchMode.equals("auto_farm")) guiGraphics.drawString(this.font, "Мин. цена:", cX - 100, sY + 93, 0xAAAAAA);
+            if (!OptiConfig.settings.searchMode.equals("targeted")) guiGraphics.drawString(this.font, "Купить | Продать множитель:", (int)(cX - 100), (int)(sY + 53), 0xAAAAAA, true);
+            if (OptiConfig.settings.searchMode.equals("auto_farm")) guiGraphics.drawString(this.font, "Мин. цена:", (int)(cX - 100), (int)(sY + 93), 0xAAAAAA, true);
         } else if (currentTab.equals("combat")) {
-            guiGraphics.drawString(this.font, "Магнит: Угол | Дистанция:", cX - 100, sY + 53, 0xAAAAAA);
-            guiGraphics.drawString(this.font, "HitBox Expander (0.0-1.0):", cX - 100, sY + 93, 0xAAAAAA);
+            guiGraphics.drawString(this.font, "Магнит: Угол | Дистанция:", (int)(cX - 100), (int)(sY + 53), 0xAAAAAA, true);
+            guiGraphics.drawString(this.font, "HitBox Expander (0.0-1.0):", (int)(cX - 100), (int)(sY + 93), 0xAAAAAA, true);
         } else if (currentTab.equals("render")) {
-            guiGraphics.drawString(this.font, "Pos: X | Y | Z    Rot: Pitch | Yaw | Roll", cX - 145, sY + 78, 0xAAAAAA);
-            guiGraphics.drawString(this.font, "Scale:", cX - 25, sY + 118, 0xAAAAAA);
+            guiGraphics.drawString(this.font, "Pos: X | Y | Z    Rot: Pitch | Yaw | Roll", (int)(cX - 145), (int)(sY + 108), 0xAAAAAA, true);
+            guiGraphics.drawString(this.font, "Scale:", (int)(cX - 25), (int)(sY + 148), 0xAAAAAA, true);
+        } else if (currentTab.equals("world")) {
+            guiGraphics.drawString(this.font, "Время Warden ESP (сек):", (int)(cX - 100), (int)(sY + 78), 0xAAAAAA, true);
+        } else if (currentTab.equals("misc")) {
+            guiGraphics.drawString(this.font, "Мин. цена SmartLoot:", (int)(cX - 100), (int)(sY + 78), 0xAAAAAA, true);
         }
         super.render(guiGraphics, mouseX, mouseY, partialTick);
     }

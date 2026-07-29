@@ -57,6 +57,7 @@ public class OptiConfig {
         public boolean fullbright = false;
         public boolean armorHud = true;
         public boolean radar = true;
+        public boolean playerEsp = false;
         public boolean trajectories = true;
         
         public boolean customViewModel = false;
@@ -65,11 +66,19 @@ public class OptiConfig {
         
         public List<String> blockEspList = new ArrayList<>(Arrays.asList("minecraft:diamond_ore", "minecraft:ancient_debris", "minecraft:chest", "minecraft:trapped_chest"));
         public boolean blockEspEnabled = false;
+
+        public List<String> autoSwapItems = new ArrayList<>();
+        public List<String> elytraSwapItems = new ArrayList<>();
+        public List<String> autoSellItems = new ArrayList<>();
+        public boolean autoRelist = true;
     }
     public static BotSettings settings = new BotSettings();
 
     public static class MarketEntry { public long avgMin; public List<Long> recentMins = new ArrayList<>(); }
-    public static class CatalogData { public Map<String, MarketEntry> marketPrices = new HashMap<>(); }
+    public static class CatalogData { 
+        public Map<String, MarketEntry> marketPrices = new HashMap<>(); 
+        public Map<String, String> cachedItemIds = new HashMap<>();
+    }
     public static CatalogData catalog = new CatalogData();
 
     public static class AutoSellJob { 
