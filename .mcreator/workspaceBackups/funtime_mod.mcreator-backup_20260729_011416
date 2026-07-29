@@ -1,74 +1,98 @@
 {
   "mod_elements": [
     {
-      "name": "AutoBuyHandler",
+      "name": "OptiConfig",
       "type": "code",
       "compiles": true,
       "locked_code": true,
-      "registry_name": "auto_buy_handler",
+      "registry_name": "opti_config",
       "metadata": {
         "files": [
-          "src/main/java/net/mcreator/funtimemod/AutoBuyHandler.java"
+          "src/main/java/net/mcreator/funtimemod/OptiConfig.java"
         ]
       }
     },
     {
-      "name": "PlayerGlowModule",
+      "name": "OptiCore",
       "type": "code",
       "compiles": true,
       "locked_code": true,
-      "registry_name": "player_glow_module",
+      "registry_name": "opti_core",
       "metadata": {
         "files": [
-          "src/main/java/net/mcreator/funtimemod/PlayerGlowModule.java"
+          "src/main/java/net/mcreator/funtimemod/OptiCore.java"
         ]
       }
     },
     {
-      "name": "OptiItemsCore",
+      "name": "OptiRender",
       "type": "code",
       "compiles": true,
       "locked_code": true,
-      "registry_name": "opti_items_core",
+      "registry_name": "opti_render",
       "metadata": {
         "files": [
-          "src/main/java/net/mcreator/funtimemod/OptiItemsCore.java"
+          "src/main/java/net/mcreator/funtimemod/OptiRender.java"
         ]
       }
     },
     {
-      "name": "OptiItemsMenuScreen",
+      "name": "OptiCombat",
       "type": "code",
       "compiles": true,
       "locked_code": true,
-      "registry_name": "opti_items_menu_screen",
+      "registry_name": "opti_combat",
       "metadata": {
         "files": [
-          "src/main/java/net/mcreator/funtimemod/OptiItemsMenuScreen.java"
+          "src/main/java/net/mcreator/funtimemod/OptiCombat.java"
         ]
       }
     },
     {
-      "name": "OptiItemsListScreen",
+      "name": "OptiSniper",
       "type": "code",
       "compiles": true,
       "locked_code": true,
-      "registry_name": "opti_items_list_screen",
+      "registry_name": "opti_sniper",
       "metadata": {
         "files": [
-          "src/main/java/net/mcreator/funtimemod/OptiItemsListScreen.java"
+          "src/main/java/net/mcreator/funtimemod/OptiSniper.java"
         ]
       }
     },
     {
-      "name": "OptiItemFeatures",
+      "name": "OptiMenu",
       "type": "code",
       "compiles": true,
       "locked_code": true,
-      "registry_name": "opti_item_features",
+      "registry_name": "opti_menu",
       "metadata": {
         "files": [
-          "src/main/java/net/mcreator/funtimemod/OptiItemFeatures.java"
+          "src/main/java/net/mcreator/funtimemod/OptiMenu.java"
+        ]
+      }
+    },
+    {
+      "name": "OptiList",
+      "type": "code",
+      "compiles": true,
+      "locked_code": true,
+      "registry_name": "opti_list",
+      "metadata": {
+        "files": [
+          "src/main/java/net/mcreator/funtimemod/OptiList.java"
+        ]
+      }
+    },
+    {
+      "name": "OptiWarden",
+      "type": "code",
+      "compiles": true,
+      "locked_code": true,
+      "registry_name": "opti_warden",
+      "metadata": {
+        "files": [
+          "src/main/java/net/mcreator/funtimemod/OptiWarden.java"
         ]
       }
     }

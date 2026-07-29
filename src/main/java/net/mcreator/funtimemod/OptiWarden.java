@@ -1,0 +1,187 @@
+package net.mcreator.funtimemod.client;
+
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.network.chat.Component;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.level.block.Blocks;
+import com.mojang.blaze3d.vertex.PoseStack;
+import org.lwjgl.glfw.GLFW;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+@EventBusSubscriber(modid = "funtime_mod", value = Dist.CLIENT)
+public class OptiWarden {
+
+    private static final Pattern TIME_PATTERN = Pattern.compile("(\\d{1,2}):(\\d{2})");
+    public static final Map<BlockPos, WardenChest> trackedChests = new ConcurrentHashMap<>();
+
+    public static class WardenChest {
+        public int initialSeconds;
+        public long syncTime;
+        public int getRemaining() { return initialSeconds - (int)((System.currentTimeMillis() - syncTime) / 1000); }
+    }
+
+    @SubscribeEvent
+    public static void onClientTick(ClientTickEvent.Post event) {
+        if (!OptiCore.isGloballyEnabled) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) return;
+
+        for (Entity entity : mc.level.entitiesForRendering()) {
+            if (entity.hasCustomName()) {
+                String cleanName = entity.getCustomName().getString().replaceAll("§[0-9a-fk-or]", "").trim();
+                Matcher m = TIME_PATTERN.matcher(cleanName);
+                if (m.find()) {
+                    int totalSecs = Integer.parseInt(m.group(1)) * 60 + Integer.parseInt(m.group(2));
+                    
+                    // Сканируем блоки под голограммой, чтобы точно прикрепить куб к сундуку
+                    BlockPos entityPos = entity.blockPosition();
+                    BlockPos chestPos = entityPos.below(); 
+                    for (int i = 0; i <= 3; i++) {
+                        BlockPos check = entityPos.below(i);
+                        net.minecraft.world.level.block.state.BlockState state = mc.level.getBlockState(check);
+                        if (state.is(Blocks.CHEST) || state.is(Blocks.TRAPPED_CHEST) || state.is(Blocks.BARREL)) {
+                            chestPos = check; break;
+                        }
+                    }
+                    
+                    WardenChest chest = trackedChests.get(chestPos);
+                    if (chest == null || Math.abs(chest.getRemaining() - totalSecs) > 2) {
+                        chest = new WardenChest();
+                        chest.initialSeconds = totalSecs;
+                        chest.syncTime = System.currentTimeMillis();
+                        trackedChests.put(chestPos, chest);
+                    }
+                }
+            }
+        }
+
+        for (Map.Entry<BlockPos, WardenChest> entry : trackedChests.entrySet()) {
+            BlockPos pos = entry.getKey();
+            if (entry.getValue().getRemaining() <= 0) {
+                if (OptiConfig.settings.wardenAutoOpen && mc.player.blockPosition().distSqr(pos) <= 36) { 
+                    mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
+                    OptiSniper.expectingWardenLoot = true; 
+                }
+                trackedChests.remove(pos); 
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onRender(RenderLevelStageEvent event) {
+        if (!OptiCore.isGloballyEnabled || !OptiConfig.settings.wardenEsp || event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) return;
+
+        PoseStack poseStack = event.getPoseStack();
+        Vec3 camPos = event.getCamera().getPosition();
+        net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
+
+        boolean hasVisibleChests = false;
+        for (Map.Entry<BlockPos, WardenChest> entry : trackedChests.entrySet()) {
+            int rem = entry.getValue().getRemaining();
+            if (rem <= OptiConfig.settings.wardenEspTime && rem > 0) hasVisibleChests = true;
+        }
+
+        if (!hasVisibleChests) return;
+
+        // 1. РИСУЕМ КРАСНЫЕ КУБЫ (Используем RenderType.gui(), он игнорирует стены и не требует света)
+        com.mojang.blaze3d.vertex.VertexConsumer consumer = bufferSource.getBuffer(net.minecraft.client.renderer.RenderType.gui());
+        
+        for (Map.Entry<BlockPos, WardenChest> entry : trackedChests.entrySet()) {
+            int rem = entry.getValue().getRemaining();
+            if (rem <= OptiConfig.settings.wardenEspTime && rem > 0) {
+                BlockPos pos = entry.getKey();
+                double x = pos.getX() - camPos.x;
+                double y = pos.getY() - camPos.y; 
+                double z = pos.getZ() - camPos.z;
+
+                // Размер куба - точно в блок сундука
+                double minX = x; double minY = y; double minZ = z;
+                double maxX = x + 1.0; double maxY = y + 1.0; double maxZ = z + 1.0;
+
+                poseStack.pushPose();
+                drawSolidBox(poseStack, consumer, minX, minY, minZ, maxX, maxY, maxZ, 255, 0, 0, 100);
+                poseStack.popPose();
+            }
+        }
+        
+        // Принудительно отрисовываем кубы в мир
+        bufferSource.endBatch(net.minecraft.client.renderer.RenderType.gui());
+
+        // 2. РИСУЕМ ТАЙМЕР НАД СУНДУКОМ (ЧЕРЕЗ СТЕНЫ)
+        for (Map.Entry<BlockPos, WardenChest> entry : trackedChests.entrySet()) {
+            int rem = entry.getValue().getRemaining();
+            if (rem <= OptiConfig.settings.wardenEspTime && rem > 0) {
+                BlockPos pos = entry.getKey();
+                poseStack.pushPose();
+                poseStack.translate(pos.getX() + 0.5 - camPos.x, pos.getY() + 1.2 - camPos.y, pos.getZ() + 0.5 - camPos.z);
+                poseStack.mulPose(mc.getEntityRenderDispatcher().cameraOrientation());
+                poseStack.scale(-0.04F, -0.04F, 0.04F); 
+                String timeText = "§f" + rem + "s";
+                mc.font.drawInBatch(timeText, (float) (-mc.font.width(timeText) / 2), 0, 0xFFFFFF, false, poseStack.last().pose(), bufferSource, net.minecraft.client.gui.Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+                poseStack.popPose();
+            }
+        }
+        bufferSource.endBatch();
+    }
+
+    private static void drawSolidBox(PoseStack poseStack, com.mojang.blaze3d.vertex.VertexConsumer consumer, double minX, double minY, double minZ, double maxX, double maxY, double maxZ, int r, int g, int b, int a) {
+        org.joml.Matrix4f pose = poseStack.last().pose();
+        float x1 = (float)minX, y1 = (float)minY, z1 = (float)minZ;
+        float x2 = (float)maxX, y2 = (float)maxY, z2 = (float)maxZ;
+        
+        drawFace(pose, consumer, x1, y2, z1, x2, y2, z1, x2, y1, z1, x1, y1, z1, r, g, b, a); // Front
+        drawFace(pose, consumer, x2, y2, z2, x1, y2, z2, x1, y1, z2, x2, y1, z2, r, g, b, a); // Back
+        drawFace(pose, consumer, x1, y2, z2, x1, y2, z1, x1, y1, z1, x1, y1, z2, r, g, b, a); // Left
+        drawFace(pose, consumer, x2, y2, z1, x2, y2, z2, x2, y1, z2, x2, y1, z1, r, g, b, a); // Right
+        drawFace(pose, consumer, x1, y2, z2, x2, y2, z2, x2, y2, z1, x1, y2, z1, r, g, b, a); // Top
+        drawFace(pose, consumer, x1, y1, z1, x2, y1, z1, x2, y1, z2, x1, y1, z2, r, g, b, a); // Bottom
+    }
+
+    private static void drawFace(org.joml.Matrix4f pose, com.mojang.blaze3d.vertex.VertexConsumer consumer, float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float x4, float y4, float z4, int r, int g, int b, int a) {
+        // Отрисовка внешней стороны
+        consumer.addVertex(pose, x1, y1, z1).setColor(r, g, b, a);
+        consumer.addVertex(pose, x2, y2, z2).setColor(r, g, b, a);
+        consumer.addVertex(pose, x3, y3, z3).setColor(r, g, b, a);
+        consumer.addVertex(pose, x4, y4, z4).setColor(r, g, b, a);
+        
+        // Отрисовка внутренней стороны (защищает от обрезания текстур под углом)
+        consumer.addVertex(pose, x4, y4, z4).setColor(r, g, b, a);
+        consumer.addVertex(pose, x3, y3, z3).setColor(r, g, b, a);
+        consumer.addVertex(pose, x2, y2, z2).setColor(r, g, b, a);
+        consumer.addVertex(pose, x1, y1, z1).setColor(r, g, b, a);
+    }
+
+    @SubscribeEvent
+    public static void onKey(InputEvent.Key event) {
+        if (event.getAction() == GLFW.GLFW_PRESS && event.getKey() == GLFW.GLFW_KEY_B && Screen.hasControlDown()) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null && mc.level != null) {
+                mc.player.displayClientMessage(Component.literal("§e[OptiItem Debug] Scanning Entities:"), false);
+                for (Entity e : mc.level.entitiesForRendering()) {
+                    if (e.distanceTo(mc.player) < 15 && e.hasCustomName()) {
+                        String name = e.getCustomName().getString();
+                        mc.player.displayClientMessage(Component.literal("-> Name: " + name + " | Clean: " + name.replaceAll("§[0-9a-fk-or]", "")), false);
+                    }
+                }
+            }
+        }
+    }
+}
